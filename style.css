@@ -130,7 +130,7 @@ nav{
     height: 100%;
     background-color: var(--bg-panel);
     gap: 10px;
-    padding: 10px;
+    padding: 20px;
     margin: 10px;
     border-radius: 10px;
 }
@@ -143,4 +143,77 @@ nav{
     padding: 10px;
     margin: 10px;
     border-radius: 10px;
+}
+.table-header{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+}
+.table-header > div{
+    display: flex;
+    gap: 10px;
+}
+select, select>option{
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    border-radius: 10px;
+}
+select{
+    height: 25px;
+}
+.page-view {
+    display: none;
+}
+
+.page-view.active-page {
+    display: contents;
+}
+.sidebar ul li.active-tab {
+    background-color: var(--side-hover);
+    border: 2px solid var(--side-hover-border);
+}
+
+@media screen and (max-width: 1071px) {
+    .table-header{
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .contents{
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+        grid-template-areas: "main stats";
+    }
+    .sidebar{
+       position: absolute;
+       z-index: -1;
+       width: 25%;
+       border-right: 1px solid var(--text-secondary);
+       transform: translateX(-200%);
+       transition: 0.2s ease-in;
+       /* grid-area: auto; */
+    }
+    .sidebar.active{
+        z-index: 100;
+        transform: translateX(0);
+    }
+}
+@media screen and (max-width: 650px) {
+    .contents{
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "main";
+    }
+    .stats{
+        width: 95%;
+        height: 100%;
+        background-color: var(--bg-panel);
+        gap: 10px;
+        padding: 10px;
+        margin: 10px;
+        border-radius: 10px;
+        grid-area: auto;
+    }
+    .sidebar{
+       width: 70%;
+    }
 }

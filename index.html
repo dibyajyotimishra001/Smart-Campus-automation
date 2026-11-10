@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Campus - Autonomous</title>
+    <title>Smart Campus-Autonomous</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -51,7 +51,7 @@
         <div class="contents">
             <div class="sidebar">
                 <ul>
-                    <li>
+                    <li data-target="dashboard-page">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                             class="bi bi-columns-gap" viewBox="0 0 16 16">
                             <path
@@ -59,7 +59,7 @@
                         </svg>
                         <p>Dashboard</p>
                     </li>
-                    <li>
+                    <li data-target="timetable-page">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                             class="bi bi-calendar" viewBox="0 0 16 16">
                             <path
@@ -67,7 +67,7 @@
                         </svg>
                         <p>Time Table</p>
                     </li>
-                    <li>
+                    <li data-target="faculty-page">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                             class="bi bi-person" viewBox="0 0 16 16">
                             <path
@@ -75,7 +75,7 @@
                         </svg>
                         <p>Faculty</p>
                     </li>
-                    <li>
+                    <li data-target="class-room-allocation-page">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                             class="bi bi-pc-display" viewBox="0 0 16 16">
                             <path
@@ -83,7 +83,7 @@
                         </svg>
                         <p>Classroom Allocations</p>
                     </li>
-                    <li>
+                    <li data-target="conflicts-page">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                             class="bi bi-body-text" viewBox="0 0 16 16">
                             <path fill-rule="evenodd"
@@ -91,7 +91,7 @@
                         </svg>
                         <p>Conflicts</p>
                     </li>
-                    <li>
+                    <li data-target="settings-page">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                             class="bi bi-gear" viewBox="0 0 16 16">
                             <path
@@ -104,16 +104,38 @@
                 </ul>
             </div>
 
-            <!-- Time table grid -->
-             <div class="time-table-grid">
+            <!-- TIME TABLE PAGE (Your existing HTML) -->
+            <div id="timetable-page" class="page-view active-page">
+                <div class="time-table-grid">
+                    <div class="table-header">
+                        <div class="course">
+                            <p>Course</p>
+                            <select id="courseSelect" name="courses">
+                                <option value="" disabled selected>Select Course</option>
+                                <option value="btech">B.Tech</option>
+                                <option value="bca">BCA</option>
+                                <option value="mca">MCA</option>
+                            </select>
+                        </div>
+                        <div class="semester">
+                            <p>Semester</p>
+                            <select id="semSelect" name="semesters" disabled>
+                                <option value="" disabled selected>Select Sem</option>
+                            </select>
+                        </div>
+                        <div class="section">
+                            <p>Sec</p>
+                            <select id="secSelect" name="sections" disabled>
+                                <option value="" disabled selected>Select Sec</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
 
-             </div>
-
-             <!-- stats  -->
-
-             <div class="stats">
-                
-             </div>
+                <div class="stats">
+                    <!-- Stats content -->
+                </div>
+            </div>
         </div>
     </main>
     <script src="script.js"></script>
