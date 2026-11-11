@@ -112,10 +112,7 @@
                         <div class="course">
                             <p>Course</p>
                             <select id="courseSelect" name="courses">
-                                <option value="" disabled selected>Select Course</option>
-                                <option value="btech">B.Tech</option>
-                                <option value="bca">BCA</option>
-                                <option value="mca">MCA</option>
+                                <option value="" disabled selected>Loading Courses...</option>
                             </select>
                         </div>
                         <div class="semester">
@@ -130,6 +127,22 @@
                                 <option value="" disabled selected>Select Sec</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div class="time-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Day / Time</th>
+                                    <th>08:00 - 10:00</th>
+                                    <th>10:15 - 12:15</th>
+                                    <th>01:30 - 03:30</th>
+                                </tr>
+                            </thead>
+                            <tbody id="timetable-body">
+                                <!-- data injection -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 

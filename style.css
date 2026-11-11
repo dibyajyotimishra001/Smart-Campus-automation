@@ -217,3 +217,23 @@ select{
        width: 70%;
     }
 }
+/* Table Grid Styling */
+.time-table {
+    margin-top: 20px;
+    overflow-x: auto;
+}
+.time-table table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+.time-table th, .time-table td {
+    background-color: var(--grid-boxes);
+    border: 1px solid var(--grid-border);
+    padding: 12px;
+    border-radius: 4px;
+}
+.time-table th {
+    color: var(--accent-blue);
+    font-weight: bold;
+}

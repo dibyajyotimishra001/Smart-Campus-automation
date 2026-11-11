@@ -1,69 +1,104 @@
-// for Light - Dark mode
-
+// Light - Dark mode logic
 const sunIcon = document.querySelector(".dark-mode-toggle");
-
 let savedTheme = localStorage.getItem("currentTheme");
 
-if(savedTheme == "enabled"){
+if (savedTheme === "enabled") {
     document.body.classList.add("light");
 }
 
-sunIcon.addEventListener("click", function(){
+sunIcon.addEventListener("click", function() {
     document.body.classList.toggle("light");
 
-    if(document.body.classList.contains("light")){
+    if (document.body.classList.contains("light")) {
         localStorage.setItem("currentTheme", "enabled");
-    }
-    else{
+    } else {
         localStorage.setItem("currentTheme", "disabled");
     }
-
 });
 
-// sidebar - hamburger
-hamburger = document.querySelector(".hamburger");
-sidebar = document.querySelector(".sidebar");
+// Sidebar - Hamburger toggle
+const hamburger = document.querySelector(".hamburger");
+const sidebar = document.querySelector(".sidebar");
 
-hamburger.addEventListener("click", ()=>{
+hamburger.addEventListener("click", () => {
     sidebar.classList.toggle("active");
 });
 
-// script_2.js (Add this below your dark mode logic)
+// SPA Navigation Logic
+const sidebarItems = document.querySelectorAll('.sidebar ul li');
+const pageViews = document.querySelectorAll('.page-view');
 
-// 1. Mock Data (This will later come from MongoDB via FastAPI)
-const campusData = {
-    btech: {
-        semesters: ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"],
-        sections: {
-            "1st": ["K", "L", "M", "N", "O", "P", "Q", "R"], // BTech 1st sem has 5 sections
-            "3rd": ["Sec 1", "Sec 2", "Sec 3", "Sec 4", "Sec 5", "Sec 6", "Sec 7", "Sec 8"],
-            "5th" : ["A", "B", "C", "D", "E", "F", "G", "H"]
+const initialActiveTarget = document.querySelector('.page-view.active-page').id;
+const initialActiveTab = document.querySelector(`[data-target="${initialActiveTarget}"]`);
+if (initialActiveTab) {
+    initialActiveTab.classList.add('active-tab');
+}
+
+sidebarItems.forEach(item => {
+    item.addEventListener('click', () => {
+        const targetId = item.getAttribute('data-target');
+        if (!targetId) return;
+
+        pageViews.forEach(page => {
+            page.classList.remove('active-page');
+        });
+
+        sidebarItems.forEach(li => {
+            li.classList.remove('active-tab');
+        });
+
+        const targetPage = document.getElementById(targetId);
+        if (targetPage) {
+            targetPage.classList.add('active-page');
         }
-    },
-    bca: {
-        semesters: ["1st", "2nd", "3rd", "4th", "5th", "6th"],
-    },
-    mca: {
-        semesters: ["1st", "2nd", "3rd", "4th"],
-    }
-};
 
-// 2. DOM Elements
+        item.classList.add('active-tab');
+    });
+});
+
+
+// 1. DYNAMIC DROPDOWN SYSTEM (Must run first)
+
+
+let campusData = {};
+
 const courseSelect = document.getElementById('courseSelect');
 const semSelect = document.getElementById('semSelect');
 const secSelect = document.getElementById('secSelect');
+const timetableBody = document.getElementById('timetable-body');
 
-// 3. Event Listeners (The Triggers)
+async function loadCampusStructure() {
+    try {
+        const response = await fetch('http://localhost:8000/api/structure');
+        const result = await response.json();
+
+        if (result.status === "success") {
+            campusData = result.data;
+
+            courseSelect.innerHTML = '<option value="" disabled selected>Select Course</option>';
+            for (const course in campusData) {
+                let option = document.createElement('option');
+                option.value = course;
+                option.textContent = course.toUpperCase();
+                courseSelect.appendChild(option);
+            }
+        }
+    } catch (error) {
+        console.error("Database connection failed:", error);
+        courseSelect.innerHTML = '<option value="" disabled selected>Server Offline</option>';
+    }
+}
+
+loadCampusStructure();
+
 courseSelect.addEventListener('change', function() {
     const selectedCourse = this.value;
-    
-    // Clear previous options
+
     semSelect.innerHTML = '<option value="" disabled selected>Select Sem</option>';
     secSelect.innerHTML = '<option value="" disabled selected>Select Sec</option>';
-    secSelect.disabled = true; // Disable section until sem is chosen
-    
+    secSelect.disabled = true;
+
     if (campusData[selectedCourse]) {
-        // Enable Sem dropdown and populate it
         semSelect.disabled = false;
         campusData[selectedCourse].semesters.forEach(sem => {
             let option = document.createElement('option');
@@ -77,11 +112,9 @@ courseSelect.addEventListener('change', function() {
 semSelect.addEventListener('change', function() {
     const selectedCourse = courseSelect.value;
     const selectedSem = this.value;
-    
-    // Clear previous sections
+
     secSelect.innerHTML = '<option value="" disabled selected>Select Sec</option>';
-    
-    // Optional Chaining (?.) prevents crash if 'sections' is missing (like in BCA)
+
     if (campusData[selectedCourse]?.sections?.[selectedSem]) {
         secSelect.disabled = false;
         campusData[selectedCourse].sections[selectedSem].forEach(sec => {
@@ -91,45 +124,66 @@ semSelect.addEventListener('change', function() {
             secSelect.appendChild(option);
         });
     } else {
-        // Fallback for BCA or any course/sem with no sections
-        // Keeps the Section dropdown strictly disabled 
         secSelect.disabled = true;
     }
 });
 
-// SPA Navigation Logic
-const sidebarItems = document.querySelectorAll('.sidebar ul li');
-const pageViews = document.querySelectorAll('.page-view');
 
-// Set initial active tab on page load (matching the HTML active-page)
-const initialActiveTarget = document.querySelector('.page-view.active-page').id;
-const initialActiveTab = document.querySelector(`[data-target="${initialActiveTarget}"]`);
-if(initialActiveTab) {
-    initialActiveTab.classList.add('active-tab');
-}
+// 2. DATA INJECTION (Fetch & Render Table)
 
-sidebarItems.forEach(item => {
-    item.addEventListener('click', () => {
-        const targetId = item.getAttribute('data-target');
-        if (!targetId) return; 
 
-        // 1. Hide all pages
-        pageViews.forEach(page => {
-            page.classList.remove('active-page');
-        });
+secSelect.addEventListener('change', function() {
+    const course = courseSelect.value;
+    const sem = semSelect.value;
+    const sec = this.value;
 
-        // 2. Remove active styling from all sidebar items
-        sidebarItems.forEach(li => {
-            li.classList.remove('active-tab');
-        });
+    timetableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Fetching Domain Data...</td></tr>';
 
-        // 3. Show the target page
-        const targetPage = document.getElementById(targetId);
-        if (targetPage) {
-            targetPage.classList.add('active-page');
-        }
-
-        // 4. Add active styling to clicked sidebar item
-        item.classList.add('active-tab');
-    });
+    fetchAndRenderTimetable(course, sem, sec);
 });
+
+async function fetchAndRenderTimetable(course, semester, section) {
+    try {
+        const url = `http://localhost:8000/api/timetable?course=${course}&semester=${semester}&section=${section}`;
+
+        const response = await fetch(url);
+        const result = await response.json();
+
+        if (result.status === "success" && result.data.length > 0) {
+            timetableBody.innerHTML = '';
+
+            const scheduleData = result.data[0].schedule;
+
+            for (const [day, classes] of Object.entries(scheduleData)) {
+                let tr = document.createElement('tr');
+
+                let tdDay = document.createElement('td');
+                tdDay.innerHTML = `<strong>${day}</strong>`;
+                tr.appendChild(tdDay);
+
+                for (let i = 1; i <= 3; i++) {
+                    let tdClass = document.createElement('td');
+                    let slotData = classes.find(c => c.slot === i);
+
+                    if (slotData) {
+                        tdClass.innerHTML = `
+                            <span style="color: var(--accent-purple); font-weight:bold;">${slotData.subject.name}</span><br>
+                            <small>${slotData.faculty.name}</small><br>
+                            <small>Room: ${slotData.room.number}</small>
+                        `;
+                    } else {
+                        tdClass.innerHTML = `- Free -`;
+                    }
+                    tr.appendChild(tdClass);
+                }
+
+                timetableBody.appendChild(tr);
+            }
+        } else {
+            timetableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No Data Found for this Section.</td></tr>';
+        }
+    } catch (error) {
+        console.error("Backend Disconnected:", error);
+        timetableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Connection Error. Is FastAPI running?</td></tr>';
+    }
+}
