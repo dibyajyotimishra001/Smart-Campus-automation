@@ -1,9 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure, OperationFailure
 
 app = FastAPI()
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,48 +13,63 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+MONGO_URL = "mongodb+srv://mishradibyajyoti011_db_user:raj@cluster0.hwomcto.mongodb.net/?retryWrites=true&w=majority"
 
-MONGO_URL = "mongodb+srv://mishradibyajyoti011_db_user:raj@cluster0.hwomcto.mongodb.net/"
-client = MongoClient(MONGO_URL)
+# Connect with a 5-second timeout and TLS fallback to catch errors immediately
+client = MongoClient(
+    MONGO_URL, 
+    serverSelectionTimeoutMS=5000,
+    tlsAllowInvalidCertificates=True
+)
+
 db = client.smart_campus
 
+# Verify connection on startup
+try:
+    client.admin.command('ping')
+    print("Database Connected Successfully!")
+except OperationFailure as e:
+    print(f"Authentication Failed (Check username/password): {e}")
+except ConnectionFailure as e:
+    print(f"Network/IP Whitelist Error: {e}")
+except Exception as e:
+    print(f"Database Error: {e}")
 
 @app.get("/api/structure")
 def get_campus_structure():
-   
-    raw_data = list(db.data_set_1.find({}, {"course": 1, "semester": 1, "section": 1, "_id": 0}))
-    
-    campus_data = {}
-    
-    for doc in raw_data:
-        c = doc.get("course")
-        sem = doc.get("semester")
-        sec = doc.get("section")
+    try:
+        raw_data = list(db.data_set_1.find({}, {"course": 1, "semester": 1, "section": 1, "_id": 0}))
+        campus_data = {}
         
-       
-        if c not in campus_data:
-            campus_data[c] = {"semesters": [], "sections": {}}
+        for doc in raw_data:
+            c = doc.get("course")
+            sem = str(doc.get("semester")) # Convert to string in case DB stores int
+            sec = doc.get("section")
             
-        
-        if sem not in campus_data[c]["semesters"]:
-            campus_data[c]["semesters"].append(sem)
-            campus_data[c]["sections"][sem] = []
-            
-        
-        if sec not in campus_data[c]["sections"][sem]:
-            campus_data[c]["sections"][sem].append(sec)
-            
-    return {"status": "success", "data": campus_data}
-
+            if not c or not sem or not sec:
+                continue
+                
+            if c not in campus_data:
+                campus_data[c] = {"semesters": [], "sections": {}}
+                
+            if sem not in campus_data[c]["semesters"]:
+                campus_data[c]["semesters"].append(sem)
+                campus_data[c]["sections"][sem] = []
+                
+            if sec not in campus_data[c]["sections"][sem]:
+                campus_data[c]["sections"][sem].append(sec)
+                
+        return {"status": "success", "data": campus_data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/timetable")
 def get_timetable(course: str, semester: str, section: str):
-    
-    query = {"course": course, "semester": semester, "section": section}
-    
+    # Handle both string and integer semester types in MongoDB
+    sem_query = {"$in": [semester, int(semester)]} if semester.isdigit() else semester
+    query = {"course": course, "semester": sem_query, "section": section}
     
     raw_data = list(db.data_set_1.find(query))
-    
     
     for item in raw_data:
         item["_id"] = str(item["_id"])
