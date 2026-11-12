@@ -13,7 +13,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MONGO_URL = "mongodb+srv://mishradibyajyoti011_db_user:raj@cluster0.hwomcto.mongodb.net/?retryWrites=true&w=majority"
+MONGO_URL = "mongodb+srv://mishradibyajyoti011_db_user:raj@cluster0.hwomcto.mongodb.net/"
 
 # Connect with a 5-second timeout and TLS fallback to catch errors immediately
 client = MongoClient(
