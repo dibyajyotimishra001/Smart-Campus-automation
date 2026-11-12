@@ -75,3 +75,52 @@ def get_timetable(course: str, semester: str, section: str):
         item["_id"] = str(item["_id"])
         
     return {"status": "success", "data": raw_data}
+@app.get("/api/faculty")
+def get_faculty():
+    try:
+        raw_data = list(db.data_set_1.find())
+
+        faculty_data = {}
+
+        for doc in raw_data:
+
+            course = doc.get("course")
+            semester = doc.get("semester")
+            section = doc.get("section")
+            for day, classes in doc.get("schedule", {}).items():
+
+                for item in classes:
+
+                    faculty = item.get("faculty", {})
+
+                    fid = faculty.get("id")
+
+                    if not fid:
+                        continue
+                    if fid not in faculty_data:
+
+                        faculty_data[fid] = {
+                            "faculty_id": fid,
+                            "faculty_name": faculty.get("name"),
+                            "classes": []
+                        }
+
+                    faculty_data[fid]["classes"].append({
+                        "course": course,
+                        "semester": semester,
+                        "section": section,
+                        "day": day.strip(),
+                        "subject": item.get("subject", {}).get("name"),
+                        "time": item.get("time_range"),
+                        "room": item.get("room", {}).get("number")
+                    })
+
+        return {
+            "status": "success",
+            "data": list(faculty_data.values())
+        }
+    except Exception as e:
+        raise HTTPException (status_code=500, detail=str(e))
+
+
+
