@@ -187,3 +187,127 @@ async function fetchAndRenderTimetable(course, semester, section) {
         timetableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Connection Error. Is FastAPI running?</td></tr>';
     }
 }
+
+// 3. FACULTY TIMELINE INJECTION (The 0ms Cache Strike)
+
+const facultyPage = document.getElementById('faculty-page');
+const facultyGrid = facultyPage.querySelector('.time-table-grid');
+
+// Injecting UI structure directly into the Faculty Page
+facultyGrid.innerHTML = `
+    <div class="table-header">
+        <div class="course">
+            <p>Select Faculty</p>
+            <select id="facultySelect" name="faculty">
+                <option value="" disabled selected>Loading Faculty Domain...</option>
+            </select>
+        </div>
+    </div>
+    <div class="time-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Day / Time</th>
+                    <th>08:00 - 10:00</th>
+                    <th>10:15 - 12:15</th>
+                    <th>01:30 - 03:30</th>
+                </tr>
+            </thead>
+            <tbody id="faculty-timetable-body">
+                <tr><td colspan="4" style="text-align:center;">Select a faculty to view their timeline</td></tr>
+            </tbody>
+        </table>
+    </div>
+`;
+
+const facultySelect = document.getElementById('facultySelect');
+const facultyTimetableBody = document.getElementById('faculty-timetable-body');
+
+// Global RAM Cache for Faculty Data (No repeated DB calls)
+let globalFacultyCache = [];
+
+async function initFacultyDomain() {
+    try {
+        const response = await fetch('http://localhost:8000/api/faculty');
+        const result = await response.json();
+
+        if (result.status === "success") {
+            globalFacultyCache = result.data; // Caching the massive payload in RAM
+            
+            facultySelect.innerHTML = '<option value="" disabled selected>Select Faculty</option>';
+            
+            // Populating Dropdown
+            globalFacultyCache.forEach(fac => {
+                let option = document.createElement('option');
+                option.value = fac.faculty_id;
+                option.textContent = fac.faculty_name;
+                facultySelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error("Faculty API Miss:", error);
+        facultySelect.innerHTML = '<option value="" disabled selected>API Offline</option>';
+    }
+}
+
+facultySelect.addEventListener('change', function() {
+    const selectedFid = this.value;
+    
+    // Direct RAM lookup - O(n) execution, Zero network latency
+    const faculty = globalFacultyCache.find(f => f.faculty_id === selectedFid);
+    
+    if (!faculty) return;
+
+    // Grouping classes by Day
+    const scheduleByDay = { "Monday": [], "Tuesday": [], "Wednesday": [], "Thursday": [], "Friday": [], "Saturday": [] };
+    
+    faculty.classes.forEach(cls => {
+        if (scheduleByDay[cls.day]) {
+            scheduleByDay[cls.day].push(cls);
+        }
+    });
+
+    facultyTimetableBody.innerHTML = '';
+    let hasClasses = false;
+
+    for (const [day, classesOfDay] of Object.entries(scheduleByDay)) {
+        if (classesOfDay.length === 0) continue;
+        hasClasses = true;
+
+        let tr = document.createElement('tr');
+        let tdDay = document.createElement('td');
+        tdDay.innerHTML = `<strong>${day}</strong>`;
+        tr.appendChild(tdDay);
+
+        // Map classes to exact time slots (08:00, 10:15, 01:30)
+        let slots = [null, null, null];
+        classesOfDay.forEach(cls => {
+            if (cls.time.includes("08:00")) slots[0] = cls;
+            else if (cls.time.includes("10:15")) slots[1] = cls;
+            else if (cls.time.includes("01:30")) slots[2] = cls;
+        });
+
+        // Render Slots
+        slots.forEach(slot => {
+            let tdClass = document.createElement('td');
+            if (slot) {
+                tdClass.innerHTML = `
+                    <span style="color: var(--accent-purple); font-weight:bold;">${slot.subject}</span><br>
+                    <small style="color: var(--accent-blue);">${slot.course.toUpperCase()} (Sem ${slot.semester} - ${slot.section})</small><br>
+                    <small>Room: ${slot.room}</small>
+                `;
+            } else {
+                tdClass.innerHTML = `- Free -`;
+            }
+            tr.appendChild(tdClass);
+        });
+
+        facultyTimetableBody.appendChild(tr);
+    }
+
+    if (!hasClasses) {
+        facultyTimetableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No Classes Assigned.</td></tr>';
+    }
+});
+
+initFacultyDomain();
