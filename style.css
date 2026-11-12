@@ -124,7 +124,7 @@ nav{
     background-color: var(--side-hover);
     border: 2px solid var(--side-hover-border);
 }
-.time-table-grid{
+.time-table-grid, .conflicts-page-grid, .classroom-allocation-grid, .faculity-time-table-grid, .dashboard-page-grid{
     grid-area: main;
     width: 100%;
     height: 100%;

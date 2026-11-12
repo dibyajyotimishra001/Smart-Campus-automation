@@ -191,7 +191,7 @@ async function fetchAndRenderTimetable(course, semester, section) {
 // 3. FACULTY TIMELINE INJECTION (The 0ms Cache Strike)
 
 const facultyPage = document.getElementById('faculty-page');
-const facultyGrid = facultyPage.querySelector('.time-table-grid');
+const facultyGrid = facultyPage.querySelector('.faculity-time-table-grid');
 
 // Injecting UI structure directly into the Faculty Page
 facultyGrid.innerHTML = `
