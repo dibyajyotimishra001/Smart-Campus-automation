@@ -121,6 +121,88 @@ def get_faculty():
         }
     except Exception as e:
         raise HTTPException (status_code=500, detail=str(e))
+@app.get("/api/rooms")
+def get_rooms():
+    try:
+        raw_data = list(db.data_set_1.find())
 
+        room_data = {}
 
+        for doc in raw_data:
+
+            for day, classes in doc.get("schedule", {}).items():
+
+                for item in classes:
+
+                    room = item.get("room", {})
+
+                    room_no = room.get("number")
+
+                    if not room_no:
+                        continue
+
+                    if room_no not in room_data:
+
+                        room_data[room_no] = {
+                            "room_number": room_no,
+                            "capacity": room.get("capacity"),
+                            "classes": []
+                        }
+
+                    room_data[room_no]["classes"].append({
+                        "course": doc.get("course"),
+                        "semester": doc.get("semester"),
+                        "section": doc.get("section"),
+                        "day": day.strip(),
+                        "subject": item.get("subject", {}).get("name"),
+                        "time": item.get("time_range")
+                    })
+
+        return {
+            "status": "success",
+            "data": list(room_data.values())
+        }
+    except Exception as e:
+        raise HTTPException (status_code=500, detail=str(e))
+
+@app.get("/api/rooms/{room_number}/timetable")
+def get_room_timetable(room_number: str):
+    try:
+        raw_data = list(db.data_set_1.find())
+
+        room_classes = []
+
+        for doc in raw_data:
+
+            for day, classes in doc.get("schedule", {}).items():
+
+                for item in classes:
+
+                    room = item.get("room", {})
+
+                    if room.get("number") == room_number:
+
+                        room_classes.append({
+                            "room": room_number,
+                            "course": doc.get("course"),
+                            "semester": doc.get("semester"),
+                            "section": doc.get("section"),
+                            "day": day.strip(),
+                            "subject": item.get("subject", {}).get("name"),
+                            "faculty": item.get("faculty", {}).get("name"),
+                            "time": item.get("time_range")
+                        })
+
+        if not room_classes:
+            raise HTTPException(
+                status_code=404,
+                detail="Room not found"
+            )
+
+        return {
+            "status": "success",
+            "data": room_classes
+        }
+    except Exception as e:
+        raise HTTPException (status_code=500, detail=str(e))
 
