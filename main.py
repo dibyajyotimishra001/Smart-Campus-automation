@@ -124,47 +124,56 @@ def get_faculty():
 @app.get("/api/rooms")
 def get_rooms():
     try:
-        raw_data = list(db.data_set_1.find())
-
-        room_data = {}
-
-        for doc in raw_data:
-
-            for day, classes in doc.get("schedule", {}).items():
-
-                for item in classes:
-
-                    room = item.get("room", {})
-
-                    room_no = room.get("number")
-
-                    if not room_no:
-                        continue
-
-                    if room_no not in room_data:
-
-                        room_data[room_no] = {
-                            "room_number": room_no,
-                            "capacity": room.get("capacity"),
-                            "classes": []
+        # Execute unwrapping, filtering, and grouping directly inside MongoDB's native engine
+        pipeline = [
+            {
+                "$project": {
+                    "_id": 0,
+                    "course": 1,
+                    "semester": 1,
+                    "section": 1,
+                    "schedule": {"$objectToArray": "$schedule"}
+                }
+            },
+            {"$unwind": "$schedule"},
+            {"$unwind": "$schedule.v"},
+            {
+                "$match": {
+                    "schedule.v.room.number": {"$exists": True, "$nin": [None, ""]}
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$schedule.v.room.number",
+                    "capacity": {"$first": "$schedule.v.room.capacity"},
+                    "classes": {
+                        "$push": {
+                            "course": "$course",
+                            "semester": "$semester",
+                            "section": "$section",
+                            "day": {"$trim": {"input": "$schedule.k"}},
+                            "subject": "$schedule.v.subject.name",
+                            "time": "$schedule.v.time_range"
                         }
-
-                    room_data[room_no]["classes"].append({
-                        "course": doc.get("course"),
-                        "semester": doc.get("semester"),
-                        "section": doc.get("section"),
-                        "day": day.strip(),
-                        "subject": item.get("subject", {}).get("name"),
-                        "time": item.get("time_range")
-                    })
+                    }
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "room_number": "$_id",
+                    "capacity": 1,
+                    "classes": 1
+                }
+            }
+        ]
 
         return {
             "status": "success",
-            "data": list(room_data.values())
+            "data": list(db.data_set_1.aggregate(pipeline))
         }
     except Exception as e:
-        raise HTTPException (status_code=500, detail=str(e))
-
+        raise HTTPException(status_code=500, detail=str(e))
 @app.get("/api/rooms/{room_number}/timetable")
 def get_room_timetable(room_number: str):
     try:

@@ -311,3 +311,139 @@ facultySelect.addEventListener('change', function() {
 });
 
 initFacultyDomain();
+
+
+// 5. CLASSROOM ALLOCATION ENGINE (The 0ms Strike)
+
+
+const classroomPage = document.getElementById('class-room-allocation-page');
+const classroomGrid = classroomPage.querySelector('.classroom-allocation-grid'); // Fixed class name based on index_2.html
+
+// Injecting UI structure into the Classroom Page
+classroomGrid.innerHTML = `
+    <div class="table-header">
+        <div class="course">
+            <p>Select Room</p>
+            <select id="roomSelect" name="room">
+                <option value="" disabled selected>Loading Room Matrix...</option>
+            </select>
+        </div>
+        <div style="margin-top: auto; padding: 10px; background: rgba(139, 92, 246, 0.1); border-radius: 8px;">
+            <p style="color: var(--accent-purple); font-size: 14px; font-weight: bold;" id="roomCapacityDisplay">Capacity: -</p>
+        </div>
+    </div>
+    <div class="time-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Day / Time</th>
+                    <th>08:00 - 10:00</th>
+                    <th>10:15 - 12:15</th>
+                    <th>01:30 - 03:30</th>
+                </tr>
+            </thead>
+            <tbody id="room-timetable-body">
+                <tr><td colspan="4" style="text-align:center;">Select a room to view occupancy</td></tr>
+            </tbody>
+        </table>
+    </div>
+`;
+
+const roomSelect = document.getElementById('roomSelect');
+const roomTimetableBody = document.getElementById('room-timetable-body');
+const roomCapacityDisplay = document.getElementById('roomCapacityDisplay');
+
+// Global RAM Cache for Rooms (Bypassing the second API endpoint completely)
+let globalRoomCache = [];
+
+async function initRoomDomain() {
+    try {
+        const response = await fetch('http://localhost:8000/api/rooms');
+        const result = await response.json();
+
+        if (result.status === "success") {
+            globalRoomCache = result.data; // Cache the aggregated payload
+            
+            roomSelect.innerHTML = '<option value="" disabled selected>Select Room</option>';
+            
+            // Sort rooms alphanumeric (e.g., A101, A102)
+            globalRoomCache.sort((a, b) => a.room_number.localeCompare(b.room_number));
+
+            globalRoomCache.forEach(room => {
+                let option = document.createElement('option');
+                option.value = room.room_number;
+                option.textContent = `Room ${room.room_number}`;
+                roomSelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error("Room API Miss:", error);
+        roomSelect.innerHTML = '<option value="" disabled selected>API Offline</option>';
+    }
+}
+
+// 0ms Rendering on Dropdown Change
+roomSelect.addEventListener('change', function() {
+    const selectedRoomNum = this.value;
+    
+    // Direct O(n) lookup from RAM cache
+    const roomData = globalRoomCache.find(r => r.room_number === selectedRoomNum);
+    
+    if (!roomData) return;
+
+    roomCapacityDisplay.textContent = `Capacity: ${roomData.capacity || 'N/A'}`;
+
+    // Structure days
+    const scheduleByDay = { "Monday": [], "Tuesday": [], "Wednesday": [], "Thursday": [], "Friday": [], "Saturday": [] };
+    
+    roomData.classes.forEach(cls => {
+        if (scheduleByDay[cls.day]) {
+            scheduleByDay[cls.day].push(cls);
+        }
+    });
+
+    roomTimetableBody.innerHTML = '';
+    let hasClasses = false;
+
+    for (const [day, classesOfDay] of Object.entries(scheduleByDay)) {
+        if (classesOfDay.length === 0) continue;
+        hasClasses = true;
+
+        let tr = document.createElement('tr');
+        let tdDay = document.createElement('td');
+        tdDay.innerHTML = `<strong>${day}</strong>`;
+        tr.appendChild(tdDay);
+
+        // Map classes to exact time slots
+        let slots = [null, null, null];
+        classesOfDay.forEach(cls => {
+            if (cls.time.includes("08:00")) slots[0] = cls;
+            else if (cls.time.includes("10:15")) slots[1] = cls;
+            else if (cls.time.includes("01:30")) slots[2] = cls;
+        });
+
+        // Render Slots
+        slots.forEach(slot => {
+            let tdClass = document.createElement('td');
+            if (slot) {
+                tdClass.innerHTML = `
+                    <span style="color: var(--accent-blue); font-weight:bold;">${slot.course.toUpperCase()}</span><br>
+                    <small style="color: var(--accent-purple);">Sem ${slot.semester} - Sec ${slot.section}</small><br>
+                    <small>${slot.subject}</small>
+                `;
+            } else {
+                tdClass.innerHTML = `- Empty -`;
+            }
+            tr.appendChild(tdClass);
+        });
+
+        roomTimetableBody.appendChild(tr);
+    }
+
+    if (!hasClasses) {
+        roomTimetableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Room is entirely free.</td></tr>';
+    }
+});
+
+// Execute Room Domain Expansion
+initRoomDomain();
