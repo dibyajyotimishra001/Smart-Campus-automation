@@ -215,7 +215,77 @@ def get_room_timetable(room_number: str):
     except Exception as e:
         raise HTTPException (status_code=500, detail=str(e))
 
+# 1. The Core Data Flattener
+def get_all_classes():
+    raw_data = list(db.data_set_1.find())
+    all_classes = []
 
+    for doc in raw_data:
+        course = doc.get("course")
+        semester = doc.get("semester")
+        section = doc.get("section")
+
+        # Extract nested schedule data and flatten it
+        for day, classes in doc.get("schedule", {}).items():
+            for item in classes:
+                class_entry = dict(item)  # Isolate the dictionary
+                class_entry["course"] = course
+                class_entry["semester"] = semester
+                class_entry["section"] = section
+                class_entry["day"] = day.strip()
+                all_classes.append(class_entry)
+
+    return all_classes
+
+
+# 2. The Clash Detection Matrix (O(N) Hash-Map Lookup)
+def find_conflicts(classes):
+    conflicts = []
+    faculty_tracker = {}
+    room_tracker = {}
+
+    for item in classes:
+        day = item.get("day", "").strip()
+        time_range = item.get("time_range", "").strip()
+        
+        if not day or not time_range:
+            continue
+
+        batch_label = f"{str(item.get('course', '')).upper()} Sem-{item.get('semester')} ({item.get('section')})"
+
+        # A. Check for Faculty Overlaps (Same teacher, two different classes at the same time)
+        faculty = item.get("faculty") or {}
+        fid = faculty.get("id")
+        if fid:
+            f_key = (fid, day, time_range)
+            if f_key in faculty_tracker:
+                conflicts.append({
+                    "type": "Faculty Conflict",
+                    "entity": faculty.get("name", fid),
+                    "day": day,
+                    "time": time_range,
+                    "clash_between": [faculty_tracker[f_key], batch_label]
+                })
+            else:
+                faculty_tracker[f_key] = batch_label
+
+        # B. Check for Classroom Overlaps (Same room, two different batches at the same time)
+        room = item.get("room") or {}
+        r_num = room.get("number")
+        if r_num:
+            r_key = (r_num, day, time_range)
+            if r_key in room_tracker:
+                conflicts.append({
+                    "type": "Room Conflict",
+                    "entity": f"Room {r_num}",
+                    "day": day,
+                    "time": time_range,
+                    "clash_between": [room_tracker[r_key], batch_label]
+                })
+            else:
+                room_tracker[r_key] = batch_label
+
+    return conflicts
 @app.get("/api/dashboard")
 def dashboard_stats() -> dict:
     try:
