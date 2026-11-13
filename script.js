@@ -57,26 +57,22 @@ sidebarItems.forEach(item => {
 });
 
 // Courses
-const courses = document.querySelectorAll(".clg-course");
+document.querySelectorAll(".clg-course, .back-btn").forEach(element => {
+    element.addEventListener("click", () => {
+        const targetId = element.getAttribute("data-target");
 
-courses.forEach(course => {
-    course.addEventListener("click", () => {
-        const target = course.dataset.target;
+        // Auto-select BTECH / BCA / MCA in dropdown when clicking a course card
+        if (element.classList.contains("clg-course")) {
+            const courseDropdown = document.getElementById("course");
+            if (courseDropdown) {
+                courseDropdown.value = element.textContent.trim().replace(".", "");
+            }
+        }
 
-        document.querySelectorAll(".page-view").forEach(page => {
-            page.style.display = "none";
-        });
-
-        document.getElementById(target).style.display = "block";
+        pageViews.forEach(page => page.classList.remove("active-page"));
+        document.getElementById(targetId)?.classList.add("active-page");
     });
 });
-function navigateTo(target) {
-    document.querySelectorAll(".page-view").forEach(page => {
-        page.style.display = "none";
-    });
-
-    document.getElementById(target).style.display = "block";
-}
 
 document.querySelectorAll("[data-target]").forEach(element => {
     element.addEventListener("click", () => {
@@ -487,3 +483,125 @@ document.addEventListener("click", (e) => {
         sidebar.classList.remove("active");
     }
 });
+
+// 6. DASHBOARD & RIGHT-SIDE STATS ENGINE
+
+const dashboardGrid = document.querySelector('#dashboard-page .dashboard-page-grid');
+const statsPanel = document.querySelector('.stats');
+
+async function initDashboardAndStats() {
+    const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+
+    try {
+        const response = await fetch('http://localhost:8000/api/dashboard');
+        const result = await response.json();
+
+        if (result.status === "success") {
+            const s = result.data;
+
+            // 1. Inject Main Dashboard Cards
+            dashboardGrid.innerHTML = `
+                <div class="table-header" style="margin-bottom: 20px;">
+                    <h2>Dashboard Overview</h2>
+                    <span style="color: var(--accent-green); font-weight: bold;">● ${todayName}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px;">
+                    <div style="background: var(--grid-boxes); border: 1px solid var(--grid-border); padding: 16px; border-radius: 10px;">
+                        <small style="color: var(--text-secondary);">TOTAL CLASSES</small>
+                        <h1 style="color: var(--accent-purple); margin-top: 6px;">${s.total_classes}</h1>
+                    </div>
+                    <div style="background: var(--grid-boxes); border: 1px solid var(--grid-border); padding: 16px; border-radius: 10px;">
+                        <small style="color: var(--text-secondary);">TOTAL FACULTY</small>
+                        <h1 style="color: var(--accent-blue); margin-top: 6px;">${s.total_faculty}</h1>
+                    </div>
+                    <div style="background: var(--grid-boxes); border: 1px solid var(--grid-border); padding: 16px; border-radius: 10px;">
+                        <small style="color: var(--text-secondary);">CLASSROOMS</small>
+                        <h1 style="color: var(--accent-green); margin-top: 6px;">${s.total_classrooms}</h1>
+                    </div>
+                    <div style="background: var(--grid-boxes); border: 1px solid var(--grid-border); padding: 16px; border-radius: 10px;">
+                        <small style="color: var(--text-secondary);">CONFLICTS</small>
+                        <h1 style="color: ${s.total_conflicts > 0 ? 'var(--error-crimson)' : 'var(--accent-green)'}; margin-top: 6px;">
+                            ${s.total_conflicts}
+                        </h1>
+                    </div>
+                </div>
+            `;
+
+            // 2. Inject Right-Side Stats Column
+            statsPanel.innerHTML = `
+                <h2 style="margin-bottom: 12px;">Live <span style="color: var(--accent-purple);">Stats</span></h2>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="background: var(--grid-boxes); padding: 10px; border-radius: 8px; border-left: 3px solid var(--accent-purple);">
+                        <small style="color: var(--text-secondary);">Today</small>
+                        <h4>${todayName}</h4>
+                    </div>
+                    <div style="background: var(--grid-boxes); padding: 10px; border-radius: 8px; border-left: 3px solid var(--accent-blue);">
+                        <small style="color: var(--text-secondary);">Active Load</small>
+                        <h4>${s.total_classes} Sessions</h4>
+                    </div>
+                    <div style="background: var(--grid-boxes); padding: 10px; border-radius: 8px; border-left: 3px solid ${s.total_conflicts > 0 ? 'var(--error-crimson)' : 'var(--accent-green)'};">
+                        <small style="color: var(--text-secondary);">Clashes</small>
+                        <h4 style="color: ${s.total_conflicts > 0 ? 'var(--error-crimson)' : 'var(--accent-green)'};">${s.total_conflicts} Detected</h4>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error("Dashboard error:", error);
+    }
+}
+
+// ==========================================
+// 7. CONFLICTS PAGE ENGINE
+// ==========================================
+
+const conflictsGrid = document.querySelector('#conflicts-page .conflicts-page-grid');
+
+async function initConflictsEngine() {
+    try {
+        const response = await fetch('http://localhost:8000/api/conflicts');
+        const result = await response.json();
+
+        if (result.status === "success") {
+            const conflicts = result.data;
+
+            if (conflicts.length === 0) {
+                conflictsGrid.innerHTML = `<h2>Schedule Conflicts</h2><p style="color: var(--accent-green); margin-top: 15px;">✔ Zero Collisions Detected.</p>`;
+                return;
+            }
+
+            const rows = conflicts.map(c => `
+                <tr>
+                    <td style="color: var(--error-crimson); font-weight: bold;">${c.type}</td>
+                    <td><strong>${c.entity}</strong></td>
+                    <td style="color: var(--accent-blue);">${c.day}</td>
+                    <td>${c.time}</td>
+                    <td style="color: var(--warning-amber);">${c.clash_between.join(' ⚡ ')}</td>
+                </tr>
+            `).join('');
+
+            conflictsGrid.innerHTML = `
+                <h2>Schedule Conflicts (${conflicts.length})</h2>
+                <div class="time-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Resource</th>
+                                <th>Day</th>
+                                <th>Time</th>
+                                <th>Clashing Batches</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error("Conflicts error:", error);
+    }
+}
+
+initDashboardAndStats();
+initConflictsEngine();

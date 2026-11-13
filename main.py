@@ -357,3 +357,13 @@ def dashboard_stats() -> dict:
             "total_conflicts": len(conflicts)
         }
     }
+@app.get("/api/conflicts")
+def get_conflicts():
+    try:
+        classes = get_all_classes()
+        return {
+            "status": "success",
+            "data": find_conflicts(classes)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
