@@ -215,3 +215,41 @@ def get_room_timetable(room_number: str):
     except Exception as e:
         raise HTTPException (status_code=500, detail=str(e))
 
+
+@app.get("/api/dashboard")
+def dashboard_stats() -> dict:
+    try:
+        classes = get_all_classes()
+
+        faculty_ids = set()
+        room_numbers = set()
+
+        for item in classes:
+
+            faculty = item.get("faculty") or {}
+            room = item.get("room") or {}
+
+            faculty_id = faculty.get("id")
+
+            if faculty_id:
+                faculty_ids.add(faculty_id)
+
+            room_number = room.get("number")
+
+            if room_number:
+                room_numbers.add(room_number)
+
+        conflicts = find_conflicts(classes)
+
+        return {
+            "status": "success",
+            "data": {
+                "total_classes": len(classes),
+                "total_faculty": len(faculty_ids),
+                "total_classrooms": len(room_numbers),
+                "total_conflicts": len(conflicts)
+            }
+        }
+    except Exception as e:
+        raise HTTPException (status_code=500, detail=str(e))
+
