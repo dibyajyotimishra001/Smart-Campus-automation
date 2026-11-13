@@ -56,6 +56,33 @@ sidebarItems.forEach(item => {
     });
 });
 
+// Courses
+const courses = document.querySelectorAll(".clg-course");
+
+courses.forEach(course => {
+    course.addEventListener("click", () => {
+        const target = course.dataset.target;
+
+        document.querySelectorAll(".page-view").forEach(page => {
+            page.style.display = "none";
+        });
+
+        document.getElementById(target).style.display = "block";
+    });
+});
+function navigateTo(target) {
+    document.querySelectorAll(".page-view").forEach(page => {
+        page.style.display = "none";
+    });
+
+    document.getElementById(target).style.display = "block";
+}
+
+document.querySelectorAll("[data-target]").forEach(element => {
+    element.addEventListener("click", () => {
+        navigateTo(element.dataset.target);
+    });
+});
 
 // 1. DYNAMIC DROPDOWN SYSTEM (Must run first)
 
@@ -445,5 +472,18 @@ roomSelect.addEventListener('change', function() {
     }
 });
 
-// Execute Room Domain Expansion
+// Execute Room Domain 
 initRoomDomain();
+
+
+// Click detection outside navbar and sidebar (The Perfected Domain)
+document.addEventListener("click", (e) => {
+    const isSideBarOpen = sidebar.classList.contains("active");
+    const clickedInsideSidebar = sidebar.contains(e.target);
+    const clickedHamburger = hamburger.contains(e.target); // Shield active for the hamburger button
+
+    // Only close if the sidebar is open, click is NOT inside sidebar, and click is NOT on the hamburger
+    if (isSideBarOpen && !clickedInsideSidebar && !clickedHamburger) {
+        sidebar.classList.remove("active");
+    }
+});
