@@ -92,7 +92,7 @@ const timetableBody = document.getElementById('timetable-body');
 
 async function loadCampusStructure() {
     try {
-        const response = await fetch('http://localhost:8000/api/structure');
+        const response = await fetch('https://smart-campus-automation-9nsu.onrender.com/api/structure');
         const result = await response.json();
 
         if (result.status === "success") {
@@ -167,7 +167,7 @@ secSelect.addEventListener('change', function() {
 
 async function fetchAndRenderTimetable(course, semester, section) {
     try {
-        const url = `http://localhost:8000/api/timetable?course=${course}&semester=${semester}&section=${section}`;
+        const url = `https://smart-campus-automation-9nsu.onrender.com/api/timetable?course=${course}&semester=${semester}&section=${section}`;
 
         const response = await fetch(url);
         const result = await response.json();
@@ -251,7 +251,7 @@ let globalFacultyCache = [];
 
 async function initFacultyDomain() {
     try {
-        const response = await fetch('http://localhost:8000/api/faculty');
+        const response = await fetch('https://smart-campus-automation-9nsu.onrender.com/api/faculty');
         const result = await response.json();
 
         if (result.status === "success") {
@@ -381,7 +381,7 @@ let globalRoomCache = [];
 
 async function initRoomDomain() {
     try {
-        const response = await fetch('http://localhost:8000/api/rooms');
+        const response = await fetch('https://smart-campus-automation-9nsu.onrender.com/api/rooms');
         const result = await response.json();
 
         if (result.status === "success") {
@@ -493,7 +493,7 @@ async function initDashboardAndStats() {
     const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
     try {
-        const response = await fetch('http://localhost:8000/api/dashboard');
+        const response = await fetch('https://smart-campus-automation-9nsu.onrender.com/api/dashboard');
         const result = await response.json();
 
         if (result.status === "success") {
@@ -559,7 +559,7 @@ const conflictsGrid = document.querySelector('#conflicts-page .conflicts-page-gr
 
 async function initConflictsEngine() {
     try {
-        const response = await fetch('http://localhost:8000/api/conflicts');
+        const response = await fetch('https://smart-campus-automation-9nsu.onrender.com/api/conflicts');
         const result = await response.json();
 
         if (result.status === "success") {

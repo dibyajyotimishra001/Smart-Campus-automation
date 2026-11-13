@@ -154,7 +154,7 @@ nav{
 .time-table-grid, .conflicts-page-grid, .classroom-allocation-grid, .faculity-time-table-grid, .dashboard-page-grid, .courses-page-grid, .admission-container{
     grid-area: main;
     width: 100%;
-    height: calc(100% - 20px);
+    height: 100%;
     min-height: 0;
     background-color: var(--bg-panel);
     gap: 10px;
