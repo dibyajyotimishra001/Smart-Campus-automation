@@ -339,7 +339,7 @@ select{
     padding: 0 14px;
     border: 1px solid rgba(255, 255, 255, 0.14);
     background: var(--grid-border);
-    color: #f5f7fb;
+    color: var(--text-primary);
     outline: none;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
