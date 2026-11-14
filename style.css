@@ -118,6 +118,7 @@ nav{
     gap: 10px;
     overflow-x: hidden;
     overflow-y: auto;
+    transition: cubic-bezier(0.445, 0.05, 0.55, 0.95);
 }
 .sidebar{
     width: 100%;
@@ -202,7 +203,6 @@ select{
     background-color: var(--side-hover);
     border: 2px solid var(--side-hover-border);
 }
-
 @media screen and (max-width: 1071px) {
     .table-header{
         display: flex;
@@ -289,6 +289,8 @@ select{
 }
 .clg-course:hover{
     transform: scale(1.10);
+    background-image: linear-gradient(-45deg, rgb(108, 108, 254), rgb(227, 118, 254));
+    color: white;
 }
 @media screen and (max-width: 823px) {
     .courses{
@@ -330,6 +332,12 @@ select{
     border: none;
     margin: 10px;
     color: white;
+    transition: 0.2s ease;
+}
+.back-btn:hover{
+    transform: scale(1.10);
+    background-image: linear-gradient(-45deg, rgb(108, 108, 254), rgb(227, 118, 254));
+    color: white;
 }
 .inputHolder{
     width: 90%;
@@ -356,9 +364,12 @@ input:focus{
     border-style: none;
     cursor: pointer;
     border-radius: 10px;
+    transition: 0.2s ease;
 }
 .sub_btn:hover{
-    background-color: rgb(95, 14, 171);
+    transform: scale(1.10);
+    background-image: linear-gradient(-45deg, rgb(108, 200, 254), rgb(175, 118, 254));
+    color: white;
 }
 .btn{
     display: flex;
@@ -381,4 +392,10 @@ input:focus{
     .name{
         margin-top: 20px;
     }
+}
+.dashboard-boxes, .stat-boxes{
+    transition: 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.dashboard-boxes:hover, .stat-boxes:hover{
+    transform: scale(1.10);
 }

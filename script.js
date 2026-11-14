@@ -506,19 +506,19 @@ async function initDashboardAndStats() {
                     <span style="color: var(--accent-green); font-weight: bold;">● ${todayName}</span>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px;">
-                    <div style="background: var(--grid-boxes); border: 1px solid var(--grid-border); padding: 16px; border-radius: 10px;">
+                    <div class="dashboard-boxes" style="background: var(--grid-boxes); border: 1px solid var(--grid-border); padding: 16px; border-radius: 10px;">
                         <small style="color: var(--text-secondary);">TOTAL CLASSES</small>
                         <h1 style="color: var(--accent-purple); margin-top: 6px;">${s.total_classes}</h1>
                     </div>
-                    <div style="background: var(--grid-boxes); border: 1px solid var(--grid-border); padding: 16px; border-radius: 10px;">
+                    <div class="dashboard-boxes" style="background: var(--grid-boxes); border: 1px solid var(--grid-border); padding: 16px; border-radius: 10px;">
                         <small style="color: var(--text-secondary);">TOTAL FACULTY</small>
                         <h1 style="color: var(--accent-blue); margin-top: 6px;">${s.total_faculty}</h1>
                     </div>
-                    <div style="background: var(--grid-boxes); border: 1px solid var(--grid-border); padding: 16px; border-radius: 10px;">
+                    <div class="dashboard-boxes" style="background: var(--grid-boxes); border: 1px solid var(--grid-border); padding: 16px; border-radius: 10px;">
                         <small style="color: var(--text-secondary);">CLASSROOMS</small>
                         <h1 style="color: var(--accent-green); margin-top: 6px;">${s.total_classrooms}</h1>
                     </div>
-                    <div style="background: var(--grid-boxes); border: 1px solid var(--grid-border); padding: 16px; border-radius: 10px;">
+                    <div class="dashboard-boxes" style="background: var(--grid-boxes); border: 1px solid var(--grid-border); padding: 16px; border-radius: 10px;">
                         <small style="color: var(--text-secondary);">CONFLICTS</small>
                         <h1 style="color: ${s.total_conflicts > 0 ? 'var(--error-crimson)' : 'var(--accent-green)'}; margin-top: 6px;">
                             ${s.total_conflicts}
@@ -531,15 +531,15 @@ async function initDashboardAndStats() {
             statsPanel.innerHTML = `
                 <h2 style="margin-bottom: 12px;">Live <span style="color: var(--accent-purple);">Stats</span></h2>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <div style="background: var(--grid-boxes); padding: 10px; border-radius: 8px; border-left: 3px solid var(--accent-purple);">
+                    <div class="stat-boxes" style="background: var(--grid-boxes); padding: 10px; border-radius: 8px; border-left: 3px solid var(--accent-purple);">
                         <small style="color: var(--text-secondary);">Today</small>
                         <h4>${todayName}</h4>
                     </div>
-                    <div style="background: var(--grid-boxes); padding: 10px; border-radius: 8px; border-left: 3px solid var(--accent-blue);">
+                    <div class="stat-boxes" style="background: var(--grid-boxes); padding: 10px; border-radius: 8px; border-left: 3px solid var(--accent-blue);">
                         <small style="color: var(--text-secondary);">Active Load</small>
                         <h4>${s.total_classes} Sessions</h4>
                     </div>
-                    <div style="background: var(--grid-boxes); padding: 10px; border-radius: 8px; border-left: 3px solid ${s.total_conflicts > 0 ? 'var(--error-crimson)' : 'var(--accent-green)'};">
+                    <div class="stat-boxes" style="background: var(--grid-boxes); padding: 10px; border-radius: 8px; border-left: 3px solid ${s.total_conflicts > 0 ? 'var(--error-crimson)' : 'var(--accent-green)'};">
                         <small style="color: var(--text-secondary);">Clashes</small>
                         <h4 style="color: ${s.total_conflicts > 0 ? 'var(--error-crimson)' : 'var(--accent-green)'};">${s.total_conflicts} Detected</h4>
                     </div>
