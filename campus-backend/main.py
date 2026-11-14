@@ -1,7 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, OperationFailure
+from datetime import datetime, timedelta
+import jwt
 
 app = FastAPI()
 
@@ -15,7 +19,6 @@ app.add_middleware(
 
 MONGO_URL = "mongodb+srv://mishradibyajyoti011_db_user:raj@cluster0.hwomcto.mongodb.net/"
 
-# Connect with a 5-second timeout and TLS fallback to catch errors immediately
 client = MongoClient(
     MONGO_URL, 
     serverSelectionTimeoutMS=5000,
@@ -24,7 +27,6 @@ client = MongoClient(
 
 db = client.smart_campus
 
-# Verify connection on startup
 try:
     client.admin.command('ping')
     print("Database Connected Successfully!")
@@ -35,6 +37,7 @@ except ConnectionFailure as e:
 except Exception as e:
     print(f"Database Error: {e}")
 
+
 @app.get("/api/structure")
 def get_campus_structure():
     try:
@@ -43,7 +46,7 @@ def get_campus_structure():
         
         for doc in raw_data:
             c = doc.get("course")
-            sem = str(doc.get("semester")) # Convert to string in case DB stores int
+            sem = str(doc.get("semester"))
             sec = doc.get("section")
             
             if not c or not sem or not sec:
@@ -63,11 +66,11 @@ def get_campus_structure():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/api/timetable")
 def get_timetable(course: str, semester: str, section: str):
-    # Handle both string and integer semester types in MongoDB
     sem_query = {"$in": [semester, int(semester)]} if semester.isdigit() else semester
-    query = {"course": course, "semester": sem_query, "section": section}
+    query = {"course": course.lower(), "semester": sem_query, "section": section}
     
     raw_data = list(db.data_set_1.find(query))
     
@@ -75,30 +78,26 @@ def get_timetable(course: str, semester: str, section: str):
         item["_id"] = str(item["_id"])
         
     return {"status": "success", "data": raw_data}
+
+
 @app.get("/api/faculty")
 def get_faculty():
     try:
         raw_data = list(db.data_set_1.find())
-
         faculty_data = {}
 
         for doc in raw_data:
-
             course = doc.get("course")
             semester = doc.get("semester")
             section = doc.get("section")
             for day, classes in doc.get("schedule", {}).items():
-
                 for item in classes:
-
                     faculty = item.get("faculty", {})
-
                     fid = faculty.get("id")
 
                     if not fid:
                         continue
                     if fid not in faculty_data:
-
                         faculty_data[fid] = {
                             "faculty_id": fid,
                             "faculty_name": faculty.get("name"),
@@ -120,11 +119,12 @@ def get_faculty():
             "data": list(faculty_data.values())
         }
     except Exception as e:
-        raise HTTPException (status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/rooms")
 def get_rooms():
     try:
-        # Execute unwrapping, filtering, and grouping directly inside MongoDB's native engine
         pipeline = [
             {
                 "$project": {
@@ -174,23 +174,19 @@ def get_rooms():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/rooms/{room_number}/timetable")
 def get_room_timetable(room_number: str):
     try:
         raw_data = list(db.data_set_1.find())
-
         room_classes = []
 
         for doc in raw_data:
-
             for day, classes in doc.get("schedule", {}).items():
-
                 for item in classes:
-
                     room = item.get("room", {})
-
                     if room.get("number") == room_number:
-
                         room_classes.append({
                             "room": room_number,
                             "course": doc.get("course"),
@@ -203,19 +199,13 @@ def get_room_timetable(room_number: str):
                         })
 
         if not room_classes:
-            raise HTTPException(
-                status_code=404,
-                detail="Room not found"
-            )
+            raise HTTPException(status_code=404, detail="Room not found")
 
-        return {
-            "status": "success",
-            "data": room_classes
-        }
+        return {"status": "success", "data": room_classes}
     except Exception as e:
-        raise HTTPException (status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
-# 1. The Core Data Flattener
+
 def get_all_classes():
     raw_data = list(db.data_set_1.find())
     all_classes = []
@@ -225,10 +215,9 @@ def get_all_classes():
         semester = doc.get("semester")
         section = doc.get("section")
 
-        # Extract nested schedule data and flatten it
         for day, classes in doc.get("schedule", {}).items():
             for item in classes:
-                class_entry = dict(item)  # Isolate the dictionary
+                class_entry = dict(item)
                 class_entry["course"] = course
                 class_entry["semester"] = semester
                 class_entry["section"] = section
@@ -238,7 +227,6 @@ def get_all_classes():
     return all_classes
 
 
-# 2. The Clash Detection Matrix (O(N) Hash-Map Lookup)
 def find_conflicts(classes):
     conflicts = []
     faculty_tracker = {}
@@ -253,7 +241,6 @@ def find_conflicts(classes):
 
         batch_label = f"{str(item.get('course', '')).upper()} Sem-{item.get('semester')} ({item.get('section')})"
 
-        # A. Check for Faculty Overlaps (Same teacher, two different classes at the same time)
         faculty = item.get("faculty") or {}
         fid = faculty.get("id")
         if fid:
@@ -269,7 +256,6 @@ def find_conflicts(classes):
             else:
                 faculty_tracker[f_key] = batch_label
 
-        # B. Check for Classroom Overlaps (Same room, two different batches at the same time)
         room = item.get("room") or {}
         r_num = room.get("number")
         if r_num:
@@ -286,28 +272,24 @@ def find_conflicts(classes):
                 room_tracker[r_key] = batch_label
 
     return conflicts
+
+
 @app.get("/api/dashboard")
+@app.get("/api/dashboard/stats")
 def dashboard_stats() -> dict:
     try:
         classes = get_all_classes()
-
         faculty_ids = set()
         room_numbers = set()
 
         for item in classes:
-
             faculty = item.get("faculty") or {}
             room = item.get("room") or {}
 
-            faculty_id = faculty.get("id")
-
-            if faculty_id:
-                faculty_ids.add(faculty_id)
-
-            room_number = room.get("number")
-
-            if room_number:
-                room_numbers.add(room_number)
+            if faculty.get("id"):
+                faculty_ids.add(faculty.get("id"))
+            if room.get("number"):
+                room_numbers.add(room.get("number"))
 
         conflicts = find_conflicts(classes)
 
@@ -321,42 +303,9 @@ def dashboard_stats() -> dict:
             }
         }
     except Exception as e:
-        raise HTTPException (status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/dashboard/stats")
-def dashboard_stats() -> dict:
 
-    classes = get_all_classes()
-
-    faculty_ids = set()
-    room_numbers = set()
-
-    for item in classes:
-
-        faculty = item.get("faculty") or {}
-        room = item.get("room") or {}
-
-        faculty_id = faculty.get("id")
-
-        if faculty_id:
-            faculty_ids.add(faculty_id)
-
-        room_number = room.get("number")
-
-        if room_number:
-            room_numbers.add(room_number)
-
-    conflicts = find_conflicts(classes)
-
-    return {
-        "status": "success",
-        "data": {
-            "total_classes": len(classes),
-            "total_faculty": len(faculty_ids),
-            "total_classrooms": len(room_numbers),
-            "total_conflicts": len(conflicts)
-        }
-    }
 @app.get("/api/conflicts")
 def get_conflicts():
     try:
@@ -365,5 +314,92 @@ def get_conflicts():
             "status": "success",
             "data": find_conflicts(classes)
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==========================================
+# ADMIN AUTHENTICATION & TIMETABLE UPDATE
+# ==========================================
+
+SECRET_KEY = "smart_campus_enterprise_jwt_secret_key"
+ALGORITHM = "HS256"
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/admin/login")
+
+class LoginData(BaseModel):
+    username: str
+    password: str
+
+class UpdateScheduleData(BaseModel):
+    course: str
+    semester: str
+    section: str
+    day: str
+    slot: int
+    new_subject: dict
+    new_faculty: dict
+    new_room: dict
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(hours=4)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def verify_admin(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        role: str = payload.get("role")
+        if username is None or role != "administrator":
+            raise HTTPException(status_code=401, detail="Unauthorized: Admin access required")
+        return username
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired authentication token")
+
+@app.post("/api/admin/login")
+def admin_login(data: LoginData):
+    if data.username.strip() == "dean_admin" and data.password.strip() == "admin123":
+        token = create_access_token({"sub": "dean_admin", "role": "administrator"})
+        return {"status": "success", "access_token": token, "token_type": "bearer"}
+    
+    raise HTTPException(status_code=401, detail="Invalid username or password")
+
+@app.get("/api/admin/verify")
+def check_admin_session(admin: str = Depends(verify_admin)):
+    return {"status": "success", "admin": admin}
+
+@app.put("/api/timetable/update")
+def update_timetable(data: UpdateScheduleData, admin: str = Depends(verify_admin)):
+    try:
+        sem_query = {"$in": [data.semester, int(data.semester)]} if data.semester.isdigit() else data.semester
+        query = {
+            "course": data.course.lower(),
+            "semester": sem_query,
+            "section": data.section
+        }
+        
+        update_path = f"schedule.{data.day}.$[elem]"
+        update_query = {
+            "$set": {
+                f"{update_path}.subject": data.new_subject,
+                f"{update_path}.faculty": data.new_faculty,
+                f"{update_path}.room": data.new_room
+            }
+        }
+        array_filters = [{"elem.slot": data.slot}]
+        
+        result = db.data_set_1.update_one(query, update_query, array_filters=array_filters)
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Target schedule slot not found in database")
+            
+        return {
+            "status": "success",
+            "message": f"Timetable updated for {data.course.upper()} Sem-{data.semester} ({data.section}) on {data.day}, Slot {data.slot}."
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

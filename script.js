@@ -1,3 +1,7 @@
+// Backend Server Configuration (Change this single line when deploying to production)
+const API_BASE_URL = "https://smart-campus-automation-9nsu.onrender.com";
+// const API_BASE_URL = "https://smart-campus-automation-9nsu.onrender.com";
+
 // Light - Dark mode logic
 const sunIcon = document.querySelector(".dark-mode-toggle");
 let savedTheme = localStorage.getItem("currentTheme");
@@ -56,12 +60,11 @@ sidebarItems.forEach(item => {
     });
 });
 
-// Courses
+// Courses Navigation
 document.querySelectorAll(".clg-course, .back-btn").forEach(element => {
     element.addEventListener("click", () => {
         const targetId = element.getAttribute("data-target");
 
-        // Auto-select BTECH / BCA / MCA in dropdown when clicking a course card
         if (element.classList.contains("clg-course")) {
             const courseDropdown = document.getElementById("course");
             if (courseDropdown) {
@@ -74,15 +77,7 @@ document.querySelectorAll(".clg-course, .back-btn").forEach(element => {
     });
 });
 
-document.querySelectorAll("[data-target]").forEach(element => {
-    element.addEventListener("click", () => {
-        navigateTo(element.dataset.target);
-    });
-});
-
-// 1. DYNAMIC DROPDOWN SYSTEM (Must run first)
-
-
+// 1. DYNAMIC DROPDOWN SYSTEM
 let campusData = {};
 
 const courseSelect = document.getElementById('courseSelect');
@@ -92,7 +87,7 @@ const timetableBody = document.getElementById('timetable-body');
 
 async function loadCampusStructure() {
     try {
-        const response = await fetch('https://smart-campus-automation-9nsu.onrender.com/api/structure');
+        const response = await fetch(`${API_BASE_URL}/api/structure`);
         const result = await response.json();
 
         if (result.status === "success") {
@@ -151,30 +146,24 @@ semSelect.addEventListener('change', function() {
     }
 });
 
-
-// 2. DATA INJECTION (Fetch & Render Table)
-
-
+// 2. TIMETABLE FETCH & RENDER
 secSelect.addEventListener('change', function() {
     const course = courseSelect.value;
     const sem = semSelect.value;
     const sec = this.value;
 
-    timetableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Fetching Domain Data...</td></tr>';
-
+    timetableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading timetable data...</td></tr>';
     fetchAndRenderTimetable(course, sem, sec);
 });
 
 async function fetchAndRenderTimetable(course, semester, section) {
     try {
-        const url = `https://smart-campus-automation-9nsu.onrender.com/api/timetable?course=${course}&semester=${semester}&section=${section}`;
-
+        const url = `${API_BASE_URL}/api/timetable?course=${course}&semester=${semester}&section=${section}`;
         const response = await fetch(url);
         const result = await response.json();
 
         if (result.status === "success" && result.data.length > 0) {
             timetableBody.innerHTML = '';
-
             const scheduleData = result.data[0].schedule;
 
             for (const [day, classes] of Object.entries(scheduleData)) {
@@ -211,18 +200,16 @@ async function fetchAndRenderTimetable(course, semester, section) {
     }
 }
 
-// 3. FACULTY TIMELINE INJECTION (The 0ms Cache Strike)
-
+// 3. FACULTY SCHEDULE MODULE
 const facultyPage = document.getElementById('faculty-page');
 const facultyGrid = facultyPage.querySelector('.faculity-time-table-grid');
 
-// Injecting UI structure directly into the Faculty Page
 facultyGrid.innerHTML = `
     <div class="table-header">
         <div class="course">
             <p>Select Faculty</p>
             <select id="facultySelect" name="faculty">
-                <option value="" disabled selected>Loading Faculty Domain...</option>
+                <option value="" disabled selected>Loading Faculty List...</option>
             </select>
         </div>
     </div>
@@ -237,7 +224,7 @@ facultyGrid.innerHTML = `
                 </tr>
             </thead>
             <tbody id="faculty-timetable-body">
-                <tr><td colspan="4" style="text-align:center;">Select a faculty to view their timeline</td></tr>
+                <tr><td colspan="4" style="text-align:center;">Select a faculty member to view their schedule</td></tr>
             </tbody>
         </table>
     </div>
@@ -245,43 +232,41 @@ facultyGrid.innerHTML = `
 
 const facultySelect = document.getElementById('facultySelect');
 const facultyTimetableBody = document.getElementById('faculty-timetable-body');
-
-// Global RAM Cache for Faculty Data (No repeated DB calls)
 let globalFacultyCache = [];
 
 async function initFacultyDomain() {
     try {
-        const response = await fetch('https://smart-campus-automation-9nsu.onrender.com/api/faculty');
+        const previousSelection = facultySelect.value;
+        const response = await fetch(`${API_BASE_URL}/api/faculty`);
         const result = await response.json();
 
         if (result.status === "success") {
-            globalFacultyCache = result.data; // Caching the massive payload in RAM
-            
+            globalFacultyCache = result.data;
             facultySelect.innerHTML = '<option value="" disabled selected>Select Faculty</option>';
             
-            // Populating Dropdown
             globalFacultyCache.forEach(fac => {
                 let option = document.createElement('option');
                 option.value = fac.faculty_id;
                 option.textContent = fac.faculty_name;
                 facultySelect.appendChild(option);
             });
+
+            if (previousSelection) {
+                facultySelect.value = previousSelection;
+                facultySelect.dispatchEvent(new Event('change'));
+            }
         }
     } catch (error) {
-        console.error("Faculty API Miss:", error);
+        console.error("Faculty API Error:", error);
         facultySelect.innerHTML = '<option value="" disabled selected>API Offline</option>';
     }
 }
 
 facultySelect.addEventListener('change', function() {
     const selectedFid = this.value;
-    
-    // Direct RAM lookup - O(n) execution, Zero network latency
     const faculty = globalFacultyCache.find(f => f.faculty_id === selectedFid);
-    
     if (!faculty) return;
 
-    // Grouping classes by Day
     const scheduleByDay = { "Monday": [], "Tuesday": [], "Wednesday": [], "Thursday": [], "Friday": [], "Saturday": [] };
     
     faculty.classes.forEach(cls => {
@@ -302,7 +287,6 @@ facultySelect.addEventListener('change', function() {
         tdDay.innerHTML = `<strong>${day}</strong>`;
         tr.appendChild(tdDay);
 
-        // Map classes to exact time slots (08:00, 10:15, 01:30)
         let slots = [null, null, null];
         classesOfDay.forEach(cls => {
             if (cls.time.includes("08:00")) slots[0] = cls;
@@ -310,7 +294,6 @@ facultySelect.addEventListener('change', function() {
             else if (cls.time.includes("01:30")) slots[2] = cls;
         });
 
-        // Render Slots
         slots.forEach(slot => {
             let tdClass = document.createElement('td');
             if (slot) {
@@ -335,20 +318,16 @@ facultySelect.addEventListener('change', function() {
 
 initFacultyDomain();
 
-
-// 5. CLASSROOM ALLOCATION ENGINE (The 0ms Strike)
-
-
+// 4. CLASSROOM ALLOCATION MODULE
 const classroomPage = document.getElementById('class-room-allocation-page');
-const classroomGrid = classroomPage.querySelector('.classroom-allocation-grid'); // Fixed class name based on index_2.html
+const classroomGrid = classroomPage.querySelector('.classroom-allocation-grid');
 
-// Injecting UI structure into the Classroom Page
 classroomGrid.innerHTML = `
     <div class="table-header">
         <div class="course">
             <p>Select Room</p>
             <select id="roomSelect" name="room">
-                <option value="" disabled selected>Loading Room Matrix...</option>
+                <option value="" disabled selected>Loading Classrooms...</option>
             </select>
         </div>
         <div style="margin-top: auto; padding: 10px; background: rgba(139, 92, 246, 0.1); border-radius: 8px;">
@@ -375,21 +354,18 @@ classroomGrid.innerHTML = `
 const roomSelect = document.getElementById('roomSelect');
 const roomTimetableBody = document.getElementById('room-timetable-body');
 const roomCapacityDisplay = document.getElementById('roomCapacityDisplay');
-
-// Global RAM Cache for Rooms (Bypassing the second API endpoint completely)
 let globalRoomCache = [];
 
 async function initRoomDomain() {
     try {
-        const response = await fetch('https://smart-campus-automation-9nsu.onrender.com/api/rooms');
+        const previousRoom = roomSelect.value;
+        const response = await fetch(`${API_BASE_URL}/api/rooms`);
         const result = await response.json();
 
         if (result.status === "success") {
-            globalRoomCache = result.data; // Cache the aggregated payload
-            
+            globalRoomCache = result.data;
             roomSelect.innerHTML = '<option value="" disabled selected>Select Room</option>';
             
-            // Sort rooms alphanumeric (e.g., A101, A102)
             globalRoomCache.sort((a, b) => a.room_number.localeCompare(b.room_number));
 
             globalRoomCache.forEach(room => {
@@ -398,25 +374,25 @@ async function initRoomDomain() {
                 option.textContent = `Room ${room.room_number}`;
                 roomSelect.appendChild(option);
             });
+
+            if (previousRoom) {
+                roomSelect.value = previousRoom;
+                roomSelect.dispatchEvent(new Event('change'));
+            }
         }
     } catch (error) {
-        console.error("Room API Miss:", error);
+        console.error("Room API Error:", error);
         roomSelect.innerHTML = '<option value="" disabled selected>API Offline</option>';
     }
 }
 
-// 0ms Rendering on Dropdown Change
 roomSelect.addEventListener('change', function() {
     const selectedRoomNum = this.value;
-    
-    // Direct O(n) lookup from RAM cache
     const roomData = globalRoomCache.find(r => r.room_number === selectedRoomNum);
-    
     if (!roomData) return;
 
     roomCapacityDisplay.textContent = `Capacity: ${roomData.capacity || 'N/A'}`;
 
-    // Structure days
     const scheduleByDay = { "Monday": [], "Tuesday": [], "Wednesday": [], "Thursday": [], "Friday": [], "Saturday": [] };
     
     roomData.classes.forEach(cls => {
@@ -437,7 +413,6 @@ roomSelect.addEventListener('change', function() {
         tdDay.innerHTML = `<strong>${day}</strong>`;
         tr.appendChild(tdDay);
 
-        // Map classes to exact time slots
         let slots = [null, null, null];
         classesOfDay.forEach(cls => {
             if (cls.time.includes("08:00")) slots[0] = cls;
@@ -445,7 +420,6 @@ roomSelect.addEventListener('change', function() {
             else if (cls.time.includes("01:30")) slots[2] = cls;
         });
 
-        // Render Slots
         slots.forEach(slot => {
             let tdClass = document.createElement('td');
             if (slot) {
@@ -464,28 +438,24 @@ roomSelect.addEventListener('change', function() {
     }
 
     if (!hasClasses) {
-        roomTimetableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Room is entirely free.</td></tr>';
+        roomTimetableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Room is completely free.</td></tr>';
     }
 });
 
-// Execute Room Domain 
 initRoomDomain();
 
-
-// Click detection outside navbar and sidebar (The Perfected Domain)
+// Close sidebar when clicking outside
 document.addEventListener("click", (e) => {
     const isSideBarOpen = sidebar.classList.contains("active");
     const clickedInsideSidebar = sidebar.contains(e.target);
-    const clickedHamburger = hamburger.contains(e.target); // Shield active for the hamburger button
+    const clickedHamburger = hamburger.contains(e.target);
 
-    // Only close if the sidebar is open, click is NOT inside sidebar, and click is NOT on the hamburger
     if (isSideBarOpen && !clickedInsideSidebar && !clickedHamburger) {
         sidebar.classList.remove("active");
     }
 });
 
-// 6. DASHBOARD & RIGHT-SIDE STATS ENGINE
-
+// 5. DASHBOARD & LIVE STATS MODULE
 const dashboardGrid = document.querySelector('#dashboard-page .dashboard-page-grid');
 const statsPanel = document.querySelector('.stats');
 
@@ -493,13 +463,12 @@ async function initDashboardAndStats() {
     const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
     try {
-        const response = await fetch('https://smart-campus-automation-9nsu.onrender.com/api/dashboard');
+        const response = await fetch(`${API_BASE_URL}/api/dashboard`);
         const result = await response.json();
 
         if (result.status === "success") {
             const s = result.data;
 
-            // 1. Inject Main Dashboard Cards
             dashboardGrid.innerHTML = `
                 <div class="table-header" style="margin-bottom: 20px;">
                     <h2>Dashboard Overview</h2>
@@ -527,7 +496,6 @@ async function initDashboardAndStats() {
                 </div>
             `;
 
-            // 2. Inject Right-Side Stats Column
             statsPanel.innerHTML = `
                 <h2 style="margin-bottom: 12px;">Live <span style="color: var(--accent-purple);">Stats</span></h2>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -551,15 +519,12 @@ async function initDashboardAndStats() {
     }
 }
 
-// ==========================================
-// 7. CONFLICTS PAGE ENGINE
-// ==========================================
-
+// 6. CONFLICTS DETECTION MODULE
 const conflictsGrid = document.querySelector('#conflicts-page .conflicts-page-grid');
 
 async function initConflictsEngine() {
     try {
-        const response = await fetch('https://smart-campus-automation-9nsu.onrender.com/api/conflicts');
+        const response = await fetch(`${API_BASE_URL}/api/conflicts`);
         const result = await response.json();
 
         if (result.status === "success") {
@@ -605,3 +570,301 @@ async function initConflictsEngine() {
 
 initDashboardAndStats();
 initConflictsEngine();
+
+// 7. ADMIN PORTAL & REAL-TIME SCHEDULE MANAGER
+const adminContainer = document.getElementById('admin-panel-container');
+
+const SUBJECT_CATALOG = [
+    { name: "Python", code: "CS102" },
+    { name: "C Programming", code: "CS100" },
+    { name: "Data Structures", code: "CS103" },
+    { name: "Algebric Structures", code: "CS101" },
+    { name: "ETC", code: "HU101" },
+    { name: "Differential Calculus", code: "MA101" },
+    { name: "DBMS", code: "CS501" },
+    { name: "OOPS", code: "CS301" },
+    { name: "MongoDB", code: "CS503" },
+    { name: "AI", code: "CS502" }
+];
+
+// Clean up any stale token stored in localStorage from older versions
+localStorage.removeItem('adminToken');
+
+async function verifyTokenValidity(token) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/admin/verify`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        return res.ok;
+    } catch {
+        return false;
+    }
+}
+
+async function renderAdminPortal() {
+    if (!adminContainer) return;
+
+    let token = sessionStorage.getItem('adminToken');
+    if (token) {
+        const isValid = await verifyTokenValidity(token);
+        if (!isValid) {
+            sessionStorage.removeItem('adminToken');
+            token = null;
+        }
+    }
+
+    if (!token) {
+        adminContainer.innerHTML = `
+            <h2>Admin <span style="color: var(--accent-purple);">Authentication</span></h2>
+            <p style="color: var(--text-secondary); margin-bottom: 20px;">Restricted Area: Authorized Deans & Coordinators only.</p>
+            <div class="form-container" style="min-height: auto; align-items: flex-start;">
+                <div class="input-style">
+                    <label>Admin Username</label><br>
+                    <input type="text" id="adminUser" class="inputHolder" placeholder="dean_admin">
+                </div>
+                <div class="input-style" style="margin-top: 10px;">
+                    <label>Password</label><br>
+                    <input type="password" id="adminPass" class="inputHolder" placeholder="••••••••">
+                </div>
+                <button id="loginBtn" class="sub_btn" style="margin-top: 15px; width: 140px;">Sign In</button>
+                <p id="loginMsg" style="margin-top: 10px; font-weight: bold;"></p>
+            </div>
+        `;
+
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const username = document.getElementById('adminUser').value.trim();
+            const password = document.getElementById('adminPass').value.trim();
+            const msg = document.getElementById('loginMsg');
+
+            msg.style.color = 'var(--accent-blue)';
+            msg.textContent = 'Authenticating...';
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/admin/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.access_token) {
+                    sessionStorage.setItem('adminToken', data.access_token);
+                    renderAdminPortal();
+                } else {
+                    msg.style.color = 'var(--error-crimson)';
+                    msg.textContent = data.detail || 'Invalid username or password!';
+                }
+            } catch (err) {
+                msg.style.color = 'var(--error-crimson)';
+                msg.textContent = 'Cannot connect to backend server!';
+            }
+        });
+
+    } else {
+        if (Object.keys(campusData).length === 0) await loadCampusStructure();
+        if (globalFacultyCache.length === 0) await initFacultyDomain();
+        if (globalRoomCache.length === 0) await initRoomDomain();
+
+        adminContainer.innerHTML = `
+            <div class="table-header" style="margin-bottom: 20px;">
+                <h2>Timetable <span style="color: var(--accent-green);">Management Portal</span></h2>
+                <button id="logoutBtn" class="sub_btn" style="background: var(--error-crimson); width: 100px;">Logout</button>
+            </div>
+
+            <h4 style="color: var(--accent-blue); margin-bottom: 10px;">1. Select Target Class & Slot</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                <div class="input-style">
+                    <label>Course</label>
+                    <select id="modCourse" class="inputHolder" style="height: 42px;">
+                        <option value="" disabled selected>Select Course</option>
+                    </select>
+                </div>
+                <div class="input-style">
+                    <label>Semester</label>
+                    <select id="modSem" class="inputHolder" style="height: 42px;" disabled>
+                        <option value="" disabled selected>Select Sem</option>
+                    </select>
+                </div>
+                <div class="input-style">
+                    <label>Section</label>
+                    <select id="modSec" class="inputHolder" style="height: 42px;" disabled>
+                        <option value="" disabled selected>Select Sec</option>
+                    </select>
+                </div>
+                <div class="input-style">
+                    <label>Day</label>
+                    <select id="modDay" class="inputHolder" style="height: 42px;">
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                        <option value="Saturday">Saturday</option>
+                    </select>
+                </div>
+                <div class="input-style">
+                    <label>Time Slot</label>
+                    <select id="modSlot" class="inputHolder" style="height: 42px;">
+                        <option value="1">Slot 1 (08:00 - 10:00)</option>
+                        <option value="2">Slot 2 (10:15 - 12:15)</option>
+                        <option value="3">Slot 3 (01:30 - 03:30)</option>
+                    </select>
+                </div>
+            </div>
+
+            <h4 style="color: var(--accent-purple); margin-bottom: 10px;">2. Assign New Resources</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+                <div class="input-style">
+                    <label>Subject</label>
+                    <select id="modSub" class="inputHolder" style="height: 42px;"></select>
+                </div>
+                <div class="input-style">
+                    <label>Faculty</label>
+                    <select id="modFac" class="inputHolder" style="height: 42px;"></select>
+                </div>
+                <div class="input-style">
+                    <label>Classroom</label>
+                    <select id="modRoom" class="inputHolder" style="height: 42px;"></select>
+                </div>
+            </div>
+
+            <button id="updateSlotBtn" class="sub_btn" style="margin-top: 25px; width: 190px; height: 42px; font-weight: bold;">Update Schedule</button>
+            <p id="updateMsg" style="margin-top: 15px; font-weight: bold;"></p>
+        `;
+
+        const modCourse = document.getElementById('modCourse');
+        const modSem = document.getElementById('modSem');
+        const modSec = document.getElementById('modSec');
+        const modSub = document.getElementById('modSub');
+        const modFac = document.getElementById('modFac');
+        const modRoom = document.getElementById('modRoom');
+
+        for (const course in campusData) {
+            let opt = document.createElement('option');
+            opt.value = course;
+            opt.textContent = course.toUpperCase();
+            modCourse.appendChild(opt);
+        }
+
+        modCourse.addEventListener('change', function() {
+            modSem.innerHTML = '<option value="" disabled selected>Select Sem</option>';
+            modSec.innerHTML = '<option value="" disabled selected>Select Sec</option>';
+            modSec.disabled = true;
+
+            if (campusData[this.value]) {
+                modSem.disabled = false;
+                campusData[this.value].semesters.forEach(sem => {
+                    let opt = document.createElement('option');
+                    opt.value = sem;
+                    opt.textContent = sem;
+                    modSem.appendChild(opt);
+                });
+            }
+        });
+
+        modSem.addEventListener('change', function() {
+            const c = modCourse.value;
+            modSec.innerHTML = '<option value="" disabled selected>Select Sec</option>';
+            if (campusData[c]?.sections?.[this.value]) {
+                modSec.disabled = false;
+                campusData[c].sections[this.value].forEach(sec => {
+                    let opt = document.createElement('option');
+                    opt.value = sec;
+                    opt.textContent = sec;
+                    modSec.appendChild(opt);
+                });
+            }
+        });
+
+        SUBJECT_CATALOG.forEach(sub => {
+            let opt = document.createElement('option');
+            opt.value = JSON.stringify(sub);
+            opt.textContent = `${sub.name} (${sub.code})`;
+            modSub.appendChild(opt);
+        });
+
+        globalFacultyCache.forEach(fac => {
+            let opt = document.createElement('option');
+            opt.value = JSON.stringify({ name: fac.faculty_name, id: fac.faculty_id });
+            opt.textContent = `${fac.faculty_name} (${fac.faculty_id})`;
+            modFac.appendChild(opt);
+        });
+
+        globalRoomCache.forEach(rm => {
+            let opt = document.createElement('option');
+            opt.value = JSON.stringify({ number: rm.room_number, capacity: rm.capacity || 60 });
+            opt.textContent = `Room ${rm.room_number} (Cap: ${rm.capacity || 60})`;
+            modRoom.appendChild(opt);
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            sessionStorage.removeItem('adminToken');
+            renderAdminPortal();
+        });
+
+        document.getElementById('updateSlotBtn').addEventListener('click', async () => {
+            const msg = document.getElementById('updateMsg');
+
+            if (!modCourse.value || !modSem.value || !modSec.value) {
+                msg.style.color = 'var(--warning-amber)';
+                msg.textContent = 'Please select Course, Semester, and Section first.';
+                return;
+            }
+
+            msg.style.color = 'var(--accent-blue)';
+            msg.textContent = 'Updating schedule in database...';
+
+            const payload = {
+                course: modCourse.value,
+                semester: modSem.value,
+                section: modSec.value,
+                day: document.getElementById('modDay').value,
+                slot: parseInt(document.getElementById('modSlot').value),
+                new_subject: JSON.parse(modSub.value),
+                new_faculty: JSON.parse(modFac.value),
+                new_room: JSON.parse(modRoom.value)
+            };
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/timetable/update`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (res.status === 401) {
+                    sessionStorage.removeItem('adminToken');
+                    renderAdminPortal();
+                    return;
+                }
+
+                if (res.ok) {
+                    msg.style.color = 'var(--accent-green)';
+                    msg.textContent = '✔ ' + data.message;
+
+                    // Refresh all views immediately including active Timetable table
+                    await initFacultyDomain();
+                    await initRoomDomain();
+                    await initDashboardAndStats();
+                    await initConflictsEngine();
+
+                    if (courseSelect.value === payload.course && semSelect.value === payload.semester && secSelect.value === payload.section) {
+                        await fetchAndRenderTimetable(payload.course, payload.semester, payload.section);
+                    }
+                } else {
+                    msg.style.color = 'var(--error-crimson)';
+                    msg.textContent = '✖ Error: ' + (data.detail || 'Update failed');
+                }
+            } catch (err) {
+                msg.style.color = 'var(--error-crimson)';
+                msg.textContent = '✖ Network Error: Could not connect to server.';
+            }
+        });
+    }
+}
+
+renderAdminPortal();
