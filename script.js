@@ -1,5 +1,6 @@
 // Backend Server Configuration (Change this single line when deploying to production)
-const API_BASE_URL = "https://smart-campus-automation-9nsu.onrender.com";
+// const API_BASE_URL = "https://smart-campus-automation-9nsu.onrender.com";
+const API_BASE_URL = "http://localhost:8000";
 // const API_BASE_URL = "https://smart-campus-automation-9nsu.onrender.com";
 
 // Light - Dark mode logic
@@ -541,7 +542,7 @@ async function initConflictsEngine() {
                     <td><strong>${c.entity}</strong></td>
                     <td style="color: var(--accent-blue);">${c.day}</td>
                     <td>${c.time}</td>
-                    <td style="color: var(--warning-amber);">${c.clash_between.join(' ⚡ ')}</td>
+                    <td style="color: var(--warning-amber);">${c.clash_between.join(' & ')}</td>
                 </tr>
             `).join('');
 
@@ -620,11 +621,11 @@ async function renderAdminPortal() {
             <div class="form-container" style="min-height: auto; align-items: flex-start;">
                 <div class="input-style">
                     <label>Admin Username</label><br>
-                    <input type="text" id="adminUser" class="inputHolder" placeholder="dean_admin">
+                    <input type="text" id="adminUser" class="inputHolder" placeholder="Enter user ID">
                 </div>
                 <div class="input-style" style="margin-top: 10px;">
                     <label>Password</label><br>
-                    <input type="password" id="adminPass" class="inputHolder" placeholder="••••••••">
+                    <input type="password" id="adminPass" class="inputHolder" placeholder="Enter password">
                 </div>
                 <button id="loginBtn" class="sub_btn" style="margin-top: 15px; width: 140px;">Sign In</button>
                 <p id="loginMsg" style="margin-top: 10px; font-weight: bold;"></p>

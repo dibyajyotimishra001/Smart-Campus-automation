@@ -360,8 +360,8 @@ def verify_admin(token: str = Depends(oauth2_scheme)):
 
 @app.post("/api/admin/login")
 def admin_login(data: LoginData):
-    if data.username.strip() == "dean_admin" and data.password.strip() == "admin123":
-        token = create_access_token({"sub": "dean_admin", "role": "administrator"})
+    if data.username.strip() == "admin_dibya" and data.password.strip() == "dibya123":
+        token = create_access_token({"sub": "admin_dibya", "role": "administrator"})
         return {"status": "success", "access_token": token, "token_type": "bearer"}
     
     raise HTTPException(status_code=401, detail="Invalid username or password")
