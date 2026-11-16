@@ -228,22 +228,102 @@ select{
     }
 }
 @media screen and (max-width: 650px) {
-    .contents{
+    /* Allow page to scroll naturally and remove the 40px dead gap */
+    .contents {
+        height: auto;
+        min-height: calc(100vh - 90px);
         grid-template-columns: minmax(0, 1fr);
-        grid-template-areas: "main";
-    }
-    .stats{
-        width: 95%;
-        height: 100%;
-        background-color: var(--bg-panel);
-        gap: 10px;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+            "main"
+            "stats";
+        gap: 16px;
         padding: 10px;
-        margin: 10px;
-        border-radius: 10px;
-        grid-area: auto;
+        overflow-y: visible;
     }
-    .sidebar{
-       width: 70%;
+
+    /* Fix right-side screen cutoff and give spacious height for 6-day routine */
+    .time-table-grid, 
+    .conflicts-page-grid, 
+    .classroom-allocation-grid, 
+    .faculity-time-table-grid, 
+    .dashboard-page-grid, 
+    .courses-page-grid, 
+    .admission-container {
+        grid-area: main;
+        width: 100%;
+        height: auto;
+        min-height: 68vh;
+        margin: 0;
+        padding: 14px 10px;
+        overflow: visible;
+    }
+
+    /* Compact dropdown header in a clean row/grid on mobile */
+    .table-header {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        width: 100%;
+    }
+
+    .table-header > div {
+        flex-direction: column;
+        gap: 4px;
+        align-items: flex-start;
+    }
+
+    .table-header select {
+        width: 100%;
+        height: 34px;
+        font-size: 13px;
+        padding: 0 6px;
+    }
+
+    /* Lock all 4 columns inside mobile screen without overflowing */
+    .time-table {
+        margin-top: 14px;
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .time-table table {
+        width: 100%;
+        table-layout: fixed;
+    }
+
+    .time-table th, 
+    .time-table td {
+        padding: 8px 5px;
+        font-size: 12px;
+        line-height: 1.35;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+
+    /* Slightly narrower first column (Day) so class slots get more space */
+    .time-table th:first-child,
+    .time-table td:first-child {
+        width: 22%;
+    }
+
+    .stats {
+        grid-area: stats;
+        width: 100%;
+        height: auto;
+        background-color: var(--bg-panel);
+        padding: 14px;
+        border-radius: 10px;
+        margin: 0;
+    }
+
+    .sidebar {
+        width: 75%;
+        margin: 0;
+        height: calc(100vh - 90px);
+        position: fixed;
+        top: 90px;
+        left: 0;
     }
 }
 /* Table Grid Styling */
